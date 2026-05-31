@@ -1,16 +1,16 @@
-<?php 
+<?php
 
-require_once ("../db_connection/conn.php");
+require_once("../db_connection/conn.php");
 
 $output = '';
 if (isset($_POST['gram-amount'])) {
-		
+
 	$gram = (isset($_POST['gram-amount']) ? sanitize($_POST['gram-amount']) : '');
 	$volume = (isset($_POST['volume-amount']) ? sanitize($_POST['volume-amount']) : '');
 	$current_price = (isset($_POST['current_price']) ? sanitize($_POST['current_price']) : '');
 	$customer_name = (isset($_POST['customer_name']) ? sanitize($_POST['customer_name']) : '');
 	$customer_contact = (isset($_POST['customer_contact']) ? sanitize($_POST['customer_contact']) : '');
-	$pin = sanitize((int)$_POST['pin']);
+	$pin = sanitize((int) $_POST['pin']);
 	$note = (isset($_POST['note']) ? sanitize($_POST['note']) : '');
 	$sale_type = ((admin_has_permission('supervisor')) ? 'in' : 'out');
 
@@ -18,7 +18,7 @@ if (isset($_POST['gram-amount'])) {
 
 		$runningCapital = find_capital_given_to($admin_id);
 		if (is_array($runningCapital)) {
-			$sale_daily =  $runningCapital['daily_id'];
+			$sale_daily = $runningCapital['daily_id'];
 
 			$density = calculateDensity($gram, $volume);
 			$pounds = calculatePounds($gram);
@@ -39,7 +39,7 @@ if (isset($_POST['gram-amount'])) {
 					$output = "Today's remaining cash balance cannot complete this trade!";
 				}
 			}
-			
+
 			if (admin_has_permission('supervisor')) {
 				$gb = remaining_gold_balance($admin_id);
 				if ($gb <= 0) {
@@ -85,11 +85,12 @@ if (isset($_POST['gram-amount'])) {
 					$statement = $conn->prepare($q);
 					$statement->execute($execute_data);
 					$r = $statement->fetchAll();
-					
+
 					$trade_status = 'bought'; // out-trade
+					$today_total_balance = 0;
 					if (admin_has_permission('salesperson')) {
 						if ($r[0]['ttsa'] > 0) {
-							$today_total_balance = (float)($today_capital - $r[0]['ttsa']);
+							$today_total_balance = (float) ($today_capital - $r[0]['ttsa']);
 						}
 					}
 
@@ -98,24 +99,24 @@ if (isset($_POST['gram-amount'])) {
 					if (admin_has_permission('supervisor')) {
 
 						$trade_status = 'sold'; // in-trade
-						
+
 						$last_sale = $r[0]['sale_total_amount'];
-						$today_total_balance = (float)($today_balance - $last_sale);
+						$today_total_balance = (float) ($today_balance - $last_sale);
 						$today_total_balance = (($today_total_balance > 0) ? $today_total_balance : 0);
 
-						$pf = (float)($last_sale - $today_balance);
+						$pf = (float) ($last_sale - $today_balance);
 						$pf = (($pf > 0) ? $pf : 0);
 					}
 
 					update_today_capital_given_balance($trade_status, $today_capital, $today_total_balance, $pf, $last_sale, $today, $admin_id);
 
-					$message = "added new sale with gram of " . $gram . " and volume of " . $volume . " and total amount of " . money($total_amount) ." and price of " . money($current_price) . " on id " . $sale_id . "";
+					$message = "added new sale with gram of " . $gram . " and volume of " . $volume . " and total amount of " . money($total_amount) . " and price of " . money($current_price) . " on id " . $sale_id . "";
 					add_to_log($message, $admin_id);
 
 					$createdAt = strtotime($createdAt);
 					$arrayOutput = array('reference' => $sale_id, 'customername' => $customer_name, 'date' => $createdAt, 'gram' => $gram, 'volume' => $volume, 'density' => $density, 'pounds' => $pounds, 'carat' => $carat, 'total_amount' => $total_amount, 'current_price' => $current_price, 'by' => $admin_id, 'message' => '');
 					$ouput = json_encode($arrayOutput);
-						
+
 					echo $ouput;
 				} else {
 					$output = 'Something went wrong.';
